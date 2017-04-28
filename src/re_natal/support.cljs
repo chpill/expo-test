@@ -13,12 +13,14 @@
   []
   (create-factory
     (create-class
-      #js {:getInitialState (fn []
-                              (this-as this
-                                (if-not @root-component
-                                  (reset! root-component this)
-                                  (throw (js/Error. "ASSERTION FAILED: re-natal.support root component mounted more than once.")))))
-           :render          (fn [] @mounted-element)})))
+     #js {:getInitialState
+          (fn []
+            (this-as this
+              (if-not @root-component
+                (reset! root-component this)
+                (throw (js/Error. "ASSERTION FAILED: re-natal.support root component mounted more than once.")))))
+
+          :render          (fn [] @mounted-element)})))
 
 (defn mount
   "A modified version of rum.core/mount to work with React Native and re-natal.
