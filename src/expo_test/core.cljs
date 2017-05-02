@@ -8,19 +8,17 @@
 
 (def addNavigationHelpers (.-addNavigationHelpers react-navigation))
 
-
-(def tab-navigator (.-TabNavigator react-navigation))
-(def StackNavigator (.-StackNavigator react-navigation))
-
-(def React (js/require "react"))
+(def navigators
+  {:stack (.-StackNavigator react-navigation)
+   :tab (.-TabNavigator react-navigation)
+   :drawer (.-DrawerNavigator react-navigation)})
 
 ;; https://github.com/re-native/re-native-navigation
-(defn make-stack-navigator
-  ([routes] (StackNavigator (clj->js routes)))
-  ([routes stack-config]
-   (StackNavigator (clj->js routes)
-                   (clj->js stack-config))))
-
+(defn navigator
+  ([name routes] ((get navigators name) (clj->js routes)))
+  ([name routes navigator-config]
+   ((get navigators name) (clj->js routes)
+    (clj->js navigator-config))))
 
 (defc home-screen [props-navigation]
   (let [navigate (.-navigate props-navigation)]
@@ -47,9 +45,21 @@
                           (text {:style {:color "white" :textAlign "center" :fontWeight "bold"}}
                                 "go back")))))
 
+(defc drawer-screen [props-navigation]
+  (let [navigate (.-navigate props-navigation)]
+    (view
+    {:style {:flexDirection "column" :margin 40 :alignItems "center"}}
+    (text {:style {:fontSize 45 :fontWeight "100" :marginBottom 20 :textAlign "center"}}
+          "PLOP?")
+    (touchable-highlight {:onPress #(navigate "DrawerOpen")
+                          :style   {:backgroundColor "#999" :padding 10 :borderRadius 5}}
+                         (text {:style {:color "white" :textAlign "center" :fontWeight "bold"}}
+                               "Open drawer")))))
+
+
 
 (defn wrap-with-class [rum-component {:keys [title]}]
-  (let [class (React.createClass
+  (let [class (js/React.createClass
                #js {:render (fn []
                               (this-as plop
                                 (println "wrapped class instance props.navigation"
@@ -58,11 +68,26 @@
         _ (aset class "navigationOptions" #js {:title title})]
     class))
 
+(def drawer-sub-routes
+  (navigator :drawer
+             {:plop          {:screen (wrap-with-class drawer-screen {:title "plop?"})}
+              :notifications {:screen (wrap-with-class drawer-screen {:title "nofigications"})}}))
+
 (def routes
   {:Home {:screen (wrap-with-class home-screen {:title "Home"})}
-   :Chat {:screen (wrap-with-class chat-screen {:title "Chat"})}})
+   :Chat {:screen (navigator :tab
+                             {:chat-1 {:screen (wrap-with-class chat-screen {:title "Chat-1"})}
+                              :chat-2 {:screen (wrap-with-class chat-screen {:title "Chat-2"})}
+                              :chat-3 {:screen (wrap-with-class chat-screen {:title "Chat-3"})}
+                              :drawer {:screen drawer-sub-routes}}
+                             {:tabBarPosition :bottom})}})
 
-(def app-navigator (make-stack-navigator routes))
+(def app-navigator (navigator :stack
+                              routes
+                              ;; :float | :screen | :none
+                              {:headerMode :float
+                               ;;:transitionConfig {}
+                               }))
 
 (def initial-navigation-state
   (app-navigator.router.getStateForAction
@@ -70,8 +95,6 @@
 
 
 (def global-mutable-state (atom {:nav initial-navigation-state}))
-
-(defn handle-navigation [])
 
 ;; Inspired by https://reactnavigation.org/docs/guides/redux
 (defc app
